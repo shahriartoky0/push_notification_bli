@@ -16,6 +16,7 @@ class _SignupScreenState extends State<SignupScreen> {
   TextEditingController _passwordTEController = TextEditingController();
   TextEditingController _nameTEController = TextEditingController();
   GlobalKey<FormState> _formkey = GlobalKey<FormState>();
+  bool loader = false;
 
   @override
   Widget build(BuildContext context) {
@@ -30,10 +31,7 @@ class _SignupScreenState extends State<SignupScreen> {
               children: [
                 Text(
                   'Register Now',
-                  style: Theme
-                      .of(context)
-                      .textTheme
-                      .displayMedium,
+                  style: Theme.of(context).textTheme.displayMedium,
                 ),
                 SizedBox(height: 10),
                 TextFormField(
@@ -68,46 +66,59 @@ class _SignupScreenState extends State<SignupScreen> {
                 SizedBox(height: 10),
                 SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton(
-                        onPressed: () async {
-                          if (_formkey.currentState!.validate()) {
-                            Map<String, String> user = {
-                              'email': _emailTEController.text.trim(),
-                              'password': _passwordTEController.text,
-                              'fullName': _nameTEController.text.trim(),
-                            };
-
-                            try {
-                              await firebaseFirestore
-                                  .collection('bli_user')
-                                  .add(user);
-                              clearTextFields();
+                    child: Visibility(
+                      replacement: Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                      visible: loader == false,
+                      child: ElevatedButton(
+                          onPressed: () async {
+                            if (_formkey.currentState!.validate()) {
+                              loader = true;
                               if (mounted) {
-                                showSnackMessage(
-                                    context, 'Registration Complete');
-                                Navigator.pushAndRemoveUntil(context,
-                                    MaterialPageRoute(
-                                        builder: (context) => LoginScreen()), (
-                                        route) => false);
+                                setState(() {});
                               }
-                            } catch (e) {
-                              if (mounted) {
-                                showSnackMessage(context, 'Error: $e');
+                              Map<String, String> user = {
+                                'email': _emailTEController.text.trim(),
+                                'password': _passwordTEController.text,
+                                'fullName': _nameTEController.text.trim(),
+                              };
+
+                              try {
+                                await firebaseFirestore
+                                    .collection('bli_user')
+                                    .add(user);
+                                clearTextFields();
+                                if (mounted) {
+                                  showSnackMessage(
+                                      context, 'Registration Complete');
+                                  Navigator.pushAndRemoveUntil(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => LoginScreen()),
+                                      (route) => false);
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  showSnackMessage(context, 'Error: $e');
+                                }
+                              } finally {
+                                if (mounted) {
+                                  loader = false;
+                                  setState(() {});
+                                }
                               }
                             }
-                          }
-                        },
-                        child: Text('Register'))),
+                          },
+                          child: Text('Register')),
+                    )),
                 SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       'If you are already a user please',
-                      style: Theme
-                          .of(context)
-                          .textTheme
-                          .headlineMedium,
+                      style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     TextButton(
                         onPressed: () {
@@ -115,7 +126,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               context,
                               MaterialPageRoute(
                                   builder: (context) => LoginScreen()),
-                                  (route) => false);
+                              (route) => false);
                         },
                         child: Text('Login'))
                   ],
@@ -145,9 +156,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   // validate Email Address
   String? isEmailValid(String? value) {
-    if (value == null || value
-        .trim()
-        .isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'Please enter your email';
     } else if (!RegExp(r'^[\w-]+(\.[\w-]+)*@[\w-]+(\.[\w-]+)+$')
         .hasMatch(value)) {
@@ -157,9 +166,7 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   String? isPasswordValid(String? password) {
-    if (password == null || password
-        .trim()
-        .isEmpty) {
+    if (password == null || password.trim().isEmpty) {
       return 'Password cannot be empty.';
     } else if (password.length < 6) {
       return 'Password must be at least 6 characters long.';

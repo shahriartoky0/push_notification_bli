@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:push_notification_bli/data/model/admin.dart';
+import 'package:push_notification_bli/data/model/user.dart';
 import 'package:push_notification_bli/ui/screens/admin_page.dart';
 import 'package:push_notification_bli/ui/screens/signup_screen.dart';
 import 'package:push_notification_bli/ui/widgets/snack_messages.dart';
@@ -18,6 +19,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordTEController = TextEditingController();
   final GlobalKey<FormState> _formkey = GlobalKey<FormState>();
   List<Admin> adminList = [];
+  List<User> userList = [];
+  bool loginLoader = false;
 
   @override
   Widget build(BuildContext context) {
@@ -63,46 +66,107 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 SizedBox(height: 12),
                 SizedBox(
-                    width: double.infinity,
+                  width: double.infinity,
+                  child: Visibility(
+                    replacement: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                    visible: loginLoader == false,
                     child: ElevatedButton(
-                        onPressed: () async {
-                          if (_formkey.currentState!.validate()) {
-                            final QuerySnapshot result = await firebaseFirestore
-                                .collection('bli_admin')
-                                .get();
-
-                            for (QueryDocumentSnapshot element in result.docs) {
-                              adminList.add(Admin(
-                                  email: element.get('email'),
-                                  password: element.get('password')));
-                            }
-                            for (Admin admin in adminList) {
-                              if (admin.email ==
-                                      _emailTEController.text.trim() &&
-                                  admin.password ==
-                                      _passwordTEController.text) {
-                                clearTextFields();
-                                if (mounted) {
-                                  showSnackMessage(context, 'Login Successful');
-                                  Navigator.pushAndRemoveUntil(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) =>
-                                              AdminPageScreen()),
-                                      (route) => true);
-                                }
-                                break;
-                              } else {
-                                clearTextFields();
-                                if (mounted) {
-                                  showSnackMessage(context,
-                                      'Invalid Username or Password !', true);
-                                }
+                      onPressed: () async {
+                        if (_formkey.currentState!.validate()) {
+                          loginLoader = true;
+                          if (mounted) {
+                            setState(() {});
+                          }
+                          final QuerySnapshot resultAdmin =
+                              await firebaseFirestore
+                                  .collection('bli_admin')
+                                  .get();
+                          final QuerySnapshot resultUser =
+                              await firebaseFirestore
+                                  .collection('bli_user')
+                                  .get();
+                          //------------------USER LOGIN --------------------------------
+                          bool userLoggedIn =
+                              false; // Add a flag to track user login status
+                          for (QueryDocumentSnapshot element
+                              in resultUser.docs) {
+                            userList.add(User(
+                                email: element.get('email'),
+                                password: element.get('password'),
+                                name: element.get('fullName')));
+                          }
+                          for (User user in userList) {
+                            if (user.email == _emailTEController.text.trim() &&
+                                user.password == _passwordTEController.text) {
+                              clearTextFields();
+                              if (mounted) {
+                                userLoggedIn = true;
+                                break; // Exit the loop
                               }
                             }
                           }
-                        },
-                        child: Text('Login'))),
+                          if (userLoggedIn) {
+                            if (mounted) {
+                              loginLoader = false;
+                              showSnackMessage(context, 'Login Successful');
+                              Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => AdminPageScreen()),
+                                  (route) => true);
+                              return;
+                            } // Exit onPressed callback
+                          }
+                          //------------------USER LOGIN --------------------------------
+                          //------------------ADMIN LOGIN ---------------------------------
+                          bool adminLoggedIn = false;
+                          for (QueryDocumentSnapshot element
+                              in resultAdmin.docs) {
+                            adminList.add(Admin(
+                                email: element.get('email'),
+                                password: element.get('password')));
+                          }
+                          for (Admin admin in adminList) {
+                            if (admin.email == _emailTEController.text.trim() &&
+                                admin.password == _passwordTEController.text) {
+                              clearTextFields();
+                              if (mounted) {
+                                adminLoggedIn = true;
+                                break; // Exit the loop
+                              }
+                            }
+                          }
+                          if (adminLoggedIn) {
+                            if (mounted) {
+                              loginLoader = false;
+                              showSnackMessage(
+                                  context, 'Successfully Logged in as ADMIN');
+                              Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => AdminPageScreen()),
+                                  (route) => true);
+                              return;
+                            }
+                          } else {
+                            clearTextFields();
+                            if (mounted) {
+                              loginLoader = false;
+                              setState(() {});
+                              showSnackMessage(context,
+                                  'Invalid Username or Password !', true);
+                            }
+                            return;
+                          }
+                          //------------------ADMIN LOGIN ---------------------------------
+                        }
+                      },
+                      child: Text('Login'),
+                    ),
+                  ),
+                ),
                 SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
