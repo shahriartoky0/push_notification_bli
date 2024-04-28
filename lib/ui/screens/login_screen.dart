@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:push_notification_bli/data/controller/auth_controller.dart';
 import 'package:push_notification_bli/data/model/admin.dart';
 import 'package:push_notification_bli/data/model/user.dart';
 import 'package:push_notification_bli/ui/screens/admin_page.dart';
@@ -21,6 +23,14 @@ class _LoginScreenState extends State<LoginScreen> {
   List<Admin> adminList = [];
   List<User> userList = [];
   bool loginLoader = false;
+
+  // Initialize Firebase Messaging
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+
+// Subscribe user to notifications topic
+  void _subscribeToNotifications() {
+    _firebaseMessaging.subscribeToTopic('notifications');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -108,9 +118,22 @@ class _LoginScreenState extends State<LoginScreen> {
                             }
                           }
                           if (userLoggedIn) {
+                            String? fcmToken = await _getFcmToken();
+                            if (fcmToken != null) {
+                              AuthController.saveUserInformation(fcmToken);
+                            } else {
+                              print(
+                                  "Failed to retrieve FCM token. Skipping saving user information.");
+                            }
+                            print(fcmToken);
+                            // Add the token to the FireStore Database starts
+
+                            // Add the token to the FireStore Database ends
                             if (mounted) {
                               loginLoader = false;
+                              // _subscribeToNotifications();
                               showSnackMessage(context, 'Login Successful');
+
                               Navigator.pushAndRemoveUntil(
                                   context,
                                   MaterialPageRoute(
@@ -141,8 +164,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           if (adminLoggedIn) {
                             if (mounted) {
                               loginLoader = false;
+
                               showSnackMessage(
                                   context, 'Successfully Logged in as ADMIN');
+
                               Navigator.pushAndRemoveUntil(
                                   context,
                                   MaterialPageRoute(
@@ -198,6 +223,17 @@ class _LoginScreenState extends State<LoginScreen> {
     _emailTEController.dispose();
     _passwordTEController.dispose();
     super.dispose();
+  }
+
+  Future<String?> _getFcmToken() async {
+    String? token = await FirebaseMessaging.instance.getToken();
+    if (token != null) {
+      print("FCM Token retrieved: $token");
+      return token;
+    } else {
+      print("Failed to retrieve FCM token");
+      return null;
+    }
   }
 
   void clearTextFields() {

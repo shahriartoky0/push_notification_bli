@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:push_notification_bli/ui/screens/login_screen.dart';
 import 'package:push_notification_bli/ui/widgets/snack_messages.dart';
@@ -88,6 +89,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                 await firebaseFirestore
                                     .collection('bli_user')
                                     .add(user);
+
                                 clearTextFields();
                                 if (mounted) {
                                   showSnackMessage(

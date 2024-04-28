@@ -1,6 +1,10 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:push_notification_bli/ui/widgets/current_app_bar.dart';
+
+import '../../data/utilities/urls.dart';
 
 class AdminPageScreen extends StatefulWidget {
   const AdminPageScreen({super.key});
@@ -12,26 +16,55 @@ class AdminPageScreen extends StatefulWidget {
 class _AdminPageScreenState extends State<AdminPageScreen> {
   final FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
 
-  Future<void> getdata() async {
-    final QuerySnapshot result =
-        await firebaseFirestore.collection('students').get();
-    print('Mere mehboob keyamat hogi');
-    print(result.size);
-    print(result.docs);
-    for (QueryDocumentSnapshot element in result.docs) {
-      print(element.get('name'));
-      print(element.get('roll'));
+  // Inside _AdminPageScreenState class
+  final String serverKey = Urls.serverKey;
 
-      // print('element.data()');
+// Send notification to users subscribed to the default topic
+  void _sendNotificationToSubscribedUsers(String title, String body) async {
+    // Construct the notification message
+    var notificationMessage = {
+      'notification': {
+        'title': title,
+        'body': body,
+      },
+      'data': {
+        'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+        // Add any additional data you want to send with the notification
+      },
+      'to': '/topic/users',
+      'topic': 'users',
+    };
+
+    // Convert the notification message to JSON
+    var messageJson = jsonEncode(notificationMessage);
+
+    // Construct the request headers
+    var headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'key=$serverKey',
+    };
+
+    // Send the HTTP POST request to FCM endpoint
+    var response = await http.post(
+      Uri.parse('https://fcm.googleapis.com/fcm/send'),
+      headers: headers,
+      body: messageJson,
+    );
+
+    // Handle the response
+    if (response.statusCode == 200) {
+      print(serverKey);
+      print('Notification sent successfully');
+      print(response.headers);
+      print(response.body);
+    } else {
+      print('Failed to send notification. Status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
     }
-    setState(() {});
   }
-
-
 
   @override
   void initState() {
-    getdata();
     super.initState();
   }
 
@@ -62,7 +95,14 @@ class _AdminPageScreenState extends State<AdminPageScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    // Inside the ElevatedButton onPressed callback
+                    onPressed: () {
+                      print('clicked notification');
+                      _sendNotificationToSubscribedUsers(
+                        'Push Notification Title',
+                        'Push Notification Body',
+                      );
+                    },
                     child: Text('Send Notification'),
                   ),
                 )
